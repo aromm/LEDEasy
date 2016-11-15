@@ -2,7 +2,7 @@ package ledplusplus.parser
  
 import scala.util.parsing.combinator._
 import scala.util._
-import ledplusplus.abysn._
+import ledplusplus.absyn._
 
 
 object LedParser extends JavaTokenParsers with PackratParsers{
