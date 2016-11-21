@@ -1,0 +1,23 @@
+Led count 150
+Led pin 17
+
+Main {
+    Custom Wassup
+}
+
+Effect Wassup {
+    Set color Red for 1
+    Set color Blue for 1
+    Set color Orange for 1
+    Set color Green for 1
+    Set color Indigo for 1
+    Set color Pink for 1
+    Custom yooo
+}
+
+Effect yooo {
+    Set color Orange for 1
+
+}
+
+

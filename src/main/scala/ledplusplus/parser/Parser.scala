@@ -5,36 +5,46 @@ import scala.util._
 import ledplusplus.absyn._
 
 
-object LedParser extends JavaTokenParsers with PackratParsers{
+object LedParser extends JavaTokenParsers with PackratParsers with RegexParsers{
 
     // parsing interface
-    def apply(s: String): ParseResult[ledplusplus.absyn.Stmt] = parseAll(stmt, s)
+    def apply(s: String): ParseResult[Prgm] = parseAll(prgm, s)
 
+    lazy val prgm: PackratParser[Prgm] = 
+      (   (stmt*) ^^ {case s => Program(s)})
     // expressions
-    lazy val stmt: PackratParser[ledplusplus.absyn.Stmt] = 
-      (   "Effect"~name~"{"~expr~"}" ^^ {case "Effect"~n~"{"~body~"}" ⇒ ledplusplus.absyn.Effect(n, body) } 
-        | "Main"~"{"~expr~"}" ^^ {case "Main"~"{"~body~"}" => ledplusplus.absyn.Main(body)})
+    lazy val stmt: PackratParser[Stmt] = 
+      (   "Effect"~name~"{"~(expr*)~"}" ^^ {case "Effect"~n~"{"~body~"}" ⇒ Effect(n, body) } 
+        | "Main"~"{"~(expr*)~"}" ^^ {case "Main"~"{"~body~"}" => Main(body)} 
+        | "Led count" ~ number   ^^ {case "Led count" ~ n     => LedCount(n)}
+        | "Led pin" ~ number   ^^ {case "Led pin" ~ n     => LedPin(n)})
         
       
-    lazy val color: PackratParser[ledplusplus.absyn.Color] = 
-      (   "Red"   ^^ {case "Red" => ledplusplus.absyn.RED}
-        | "Blue"   ^^ {case "Blue" => ledplusplus.absyn.BLUE}
-        | "Green"   ^^ {case "Green" => ledplusplus.absyn.GREEN}
-        | "Orange"   ^^ {case "Orange" => ledplusplus.absyn.ORANGE}
-        | "Indigo"   ^^ {case "Indigo" => ledplusplus.absyn.INDIGO}
-        | "Pink"   ^^ {case "Pink" => ledplusplus.absyn.PINK}
-        | "Rgb"~number~" "~number~" "~number ^^ {case "Rgb"~r~" "~g~" "~b => ledplusplus.absyn.RGB(r, g, b)})
+    lazy val color: PackratParser[Color] = 
+      (   "Red"                                 ^^ {case "Red" => RED}
+        | "Blue"                                ^^ {case "Blue" => BLUE}
+        | "Green"                               ^^ {case "Green" => GREEN}
+        | "Orange"                              ^^ {case "Orange" => ORANGE}
+        | "Indigo"                              ^^ {case "Indigo" => INDIGO}
+        | "Pink"                                ^^ {case "Pink" => PINK}
+        | "Rgb"~number~" "~number~" "~number    ^^ {case "Rgb"~r~" "~g~" "~b => RGB(r, g, b)})
+        //| "Rainbow"                             ^^ {case "Rainbow" => RAINBOW})
 
-    lazy val expr: PackratParser[ledplusplus.absyn.Expr] = 
-      (   "Strip color"~color~"for"~duration ^^ {case "Strip color"~c~"for"~d => ledplusplus.absyn.StripColor(c, d) } 
-        | "Custom"~name                      ^^ {case "Custom"~n              => ledplusplus.absyn.CustomEffect(n)})
+// make setColor not strip color
+    lazy val expr: PackratParser[Expr] = 
+      (   "Set color"~color~"for"~duration ^^ {case "Set color"~c~"for"~d => StripColor(c, d) } 
+        | "Custom"~name                      ^^ {case "Custom"~n              => CustomEffect(n)}
+        | "Cascade"~color~duration      ^^ {case "Cascade"~c~d => Cascade(c, d)}
+        | "Wave"~color~duration         ^^ {case "Wave"~c~d    => Wave(c, d)}
+        | "Cylon"~color~duration        ^^ {case "Cylon"~c~d   => Cylon(c, d)}
+        | "Rainbow"~duration            ^^ {case "Rainbow"~d   => Rainbow(d)})
 
     // does this just consume our desired string or all the tokens in the world
-    def name: Parser[String] = stringLiteral ^^ {case s => s}
+    def name: Parser[String] =  """[a-zA-Z]+""".r ^^ { _.toString }
 
     // does this just consume our desired integer or all the tokens in the world
-    def number: Parser[Num] = wholeNumber ^^ {s ⇒ Num(s.toInt)}    
+    def number: Parser[Integer] = wholeNumber ^^ {s ⇒ s.toInt}    
 
     // does this just consume our desired integer or all the tokens in the world
-    def duration: Parser[Num] = wholeNumber ^^ {s ⇒ Num(s.toInt)}    
+    def duration: Parser[Integer] = wholeNumber ^^ {s ⇒ s.toInt}    
 }
