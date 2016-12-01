@@ -18,8 +18,8 @@ import ledplusplus.absyn._
 //   }
 // }
 
+import java.io._
 
-import java.io.File
 import scalafx.application.JFXApp
 
 
@@ -27,46 +27,57 @@ import scalafx.application.JFXApp
 object Led {
  
  def main(args: Array[String]): Unit = {
-    println("Hello, world!")
-  
- // val args = parameters.unnamed
 
- //  val srcFileName = args(0)
-    val srcFileName = "test.txt"
+    val srcFileName = args.toList(1)
+    val nameNoExtension = srcFileName.substring(0, srcFileName.indexOf("."))
     val sourceFile = io.Source.fromFile(srcFileName)
     val source = try sourceFile.mkString finally sourceFile.close()
 
- //  // parse file
- //  val sourceFile = io.Source.fromFile(srcFileName)
- //  val source = try sourceFile.mkString finally sourceFile.close()
+    val parseResult = LedParser(source)
+  
+  
+    parseResult match {
+      case LedParser.Success(ast, _) => evalAst(ast, nameNoExtension)
+      case e: LedParser.NoSuccess => {
+        System.err.println(e)
+        System.exit(100)
+      }
+    }
+  }
 
-    println("My Code")
-  println(source)
-  Console.out.flush
-  println("The parsed code")
-  println(LedParser(source))
-  Console.out.flush
+  def evalAst(ast: Prgm, fileName: String) = {
 
-  val parseResult = LedParser(source)
+    // if (parseResult == LedParser.NoSuccess){
+    //   println(parseResult)
+    // }
+  
+    // val ast = parseResult.get
+    val arduinoCode = evalProgram(ast)
+  
+  
+    val dir = new File("./" + fileName);
+    val file = new File("./" + fileName + "/" + fileName + ".ino")
+    if(dir.exists){
+      mkFile(file, arduinoCode)
+    }
+    else {
+      // attempt to create the directory here
+      val successful = dir.mkdir();
+      if (successful)
+      {
+        mkFile(file, arduinoCode)
+      }
+      else
+      {
+        // creating the directory failed
+        println("failed trying to create the directory");
+      }
+    }
+  }
 
-  require(parseResult.successful)
-
-  // val expr: Expr = CustomEffect("hello")
-  // val exprL: List[Expr] = List(expr)
-
-  // val stmt: Stmt = Main(exprL)
-  // val stmtL: List[Stmt] = List(stmt)
-
-  // val prgm: Prgm = Program(stmtL)
-
-  // val arduinoCode = evalProgram(prgm)
-
-  val ast = parseResult.get
-  val arduinoCode = evalProgram(ast)
-
-  println("The arduino code")
-  println(arduinoCode)
-    Console.out.flush
-
-}
+  def mkFile(file: File, code: String) = {
+    val bw = new BufferedWriter(new FileWriter(file, false))
+    bw.write(code)
+    bw.close()
+  }
 }

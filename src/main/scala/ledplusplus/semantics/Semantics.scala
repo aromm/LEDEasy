@@ -152,63 +152,6 @@ package object semantics {
     initCode += "#define LIGHTYELLOW     0xFFFFE0\n"
     initCode += "#define IVORY           0xFFFFF0\n"
     initCode += "#define WHITE           0xFFFFFF\n"
-
-
-    //////////////////////////////////////////////////////
-    ////////  Include code for base features  ////////////
-    ////////     and Default pin/led values   ////////////
-    //////////////////////////////////////////////////////
-    initCode += "\n"
-    initCode += "\n"
-    initCode += "\n"
-    // initCode += "#define PIN 4\n"
-    // initCode += "#define LED_COUNT 12\n"
-    // initCode += "\n"
-    // initCode += "// Create an instance of the Adafruit_NeoPixel class called \"leds\".\n"
-    // initCode += "// That'll be what we refer to from here on...\n"
-    // initCode += "Adafruit_NeoPixel leds = Adafruit_NeoPixel(LED_COUNT, PIN, NEO_GRB + NEO_KHZ800);\n"
-    // initCode += "\n"
-
-    //////////////////////////////////////////////////////
-    //////////  Include Arduino Setup code  //////////////
-    //////////////////////////////////////////////////////
-
-    // initCode += "void setup()\n"
-    // initCode += "{\n"
-    // initCode += "\tleds.begin();  // Call this to start up the LED strip.\n"
-    // initCode += "\tclearLEDs();   // This function, defined below, turns all LEDs off...\n"
-    // initCode += "\tleds.show();   // ...but the LEDs don't actually update until you call this.\n"
-    // initCode += "}\n"
-    // initCode += "\n"
-    
-    //////////////////////////////////////////////////////
-    //////////////  The Set Color method /////////////////
-    //////////////////////////////////////////////////////
-    // initCode += "void setColor(int color, int duration){\n"
-    // initCode += "\tbyte red = (color & 0xFF0000) >> 16;\n"
-    // initCode += "\tbyte green = (color & 0x00FF00) >> 8;\n"
-    // initCode += "\tbyte blue = (color & 0x0000FF);\n"
-    // initCode += "\n"
-    // initCode += "\tfor(int i=0; i<LED_COUNT; i++){\n"
-    // initCode += "\t\tleds.setPixelColor(i, red, green, blue);\n"
-    // initCode += "\t}\n"
-    // initCode += "\tleds.show();\n"
-    // initCode += "\tdelay(duration*1000);\n"
-    // initCode += "}\n"
-    // initCode += "\n"
-
-    // ////////////////////////////////////////////////////////
-    // ////////////////   Clear LEDs method   /////////////////
-    // ////////////////////////////////////////////////////////
-
-    // initCode += "void clearLEDs()\n"
-    // initCode += "{\n"
-    // initCode += "\tfor (int i=0; i<LED_COUNT; i++)\n"
-    // initCode += "\t{\n"
-    // initCode += "\t\tleds.setPixelColor(i, 0);\n"
-    // initCode += "\t}\n"
-    // initCode += "}\n"
-
     initCode += "\n"
     initCode += "\n"
     initCode += "\n"
@@ -226,6 +169,7 @@ package object semantics {
         case Program(body)      => initCode + evalStmts(body)
         case default            => "//program Default//"
     }
+
     def evalStmts (stmts: List[Stmt]): String = {
         if (stmts.isEmpty){
             ""
@@ -239,8 +183,7 @@ package object semantics {
     def evalStmt (stmt: Stmt): String = stmt match {
         case Effect(name, body)              => voidFuncHeader(name) + evalExprs(body) + "}\n"
         case Main(body)                      => loopFuncHeader() + evalExprs(body) + "}\n"
-        case LedCount(count)                 => "#define LED_COUNT " + count + "\n" + declareLeds() + declareSetup() + declareHelperFuncs()
-        case LedPin(pin)                     => "#define PIN " + pin + "\n"
+        case LedData(count, pin)              => "#define LED_COUNT " + count + "\n" + "#define PIN " + pin + "\n" + declareLeds() + declareSetup() + declareHelperFuncs()
         case default                         => "//Stmt default//"
     }
 
@@ -252,7 +195,7 @@ package object semantics {
           "{\n" +
           "\tleds.begin();  // Call this to start up the LED strip.\n" +
           "\tclearLEDs();   // This function, defined below, turns all LEDs off...\n" +
-          "\tleds.brightness(20);"
+          "\tleds.setBrightness(20);\n" +
           "\tleds.show();   // ...but the LEDs don't actually update until you call this.\n" +
           "}\n" +
           "\n" 
@@ -261,18 +204,69 @@ package object semantics {
         //////////////////////////////////////////// +
         ////   SET COLOR  method   ///////////////// +
         //////////////////////////////////////////// +    
-        "void setColor(int color, int duration){\n" +
-        "\tbyte red = (color & 0xFF0000) >> 16;\n" +
-        "\tbyte green = (color & 0x00FF00) >> 8;\n" +
-        "\tbyte blue = (color & 0x0000FF);\n" +
-        "\n" +
-        "\tfor(int i=0; i<LED_COUNT; i++){\n" +
-        "\t\tleds.setPixelColor(i, red, green, blue);\n" +
-        "\t}\n" +
-        "\tleds.show();\n" +
-        "\tdelay(duration*1000);\n" +
-        "}\n" +
-        "\n" +
+        "/********************************\n"+
+        "* If End Color is not -1, then\n"+
+        "* the user has specified a color\n"+
+        "* range for fading so run\n"+
+        "* *setColorWithoutRange*. otherwise,\n"+
+        "* run *setColorWithRange*\n"+
+        "********************************/\n"+
+        "void setColor(long startColor, long endColor, float duration){\n"+
+        "\n"+
+        "   if (endColor != -1) {\n"+
+        "    setColorWithRange(startColor, endColor, duration);\n"+
+        "   }\n"+
+        "   else {\n"+
+        "    setColorWithoutRange(startColor, duration);\n"+
+        "   }\n"+
+        "}\n"+
+        "\n"+
+        "void setColorWithRange(long startColor, long endColor, float duration) {\n"+
+        "  byte start_red = (startColor & 0xFF0000) >> 16;\n"+
+        "  byte start_green = (startColor & 0x00FF00) >> 8;\n"+
+        "  byte start_blue = (startColor & 0x0000FF);\n"+
+        "  byte end_red = (endColor & 0xFF0000) >> 16;\n"+
+        "  byte end_green = (endColor & 0x00FF00) >> 8;\n"+
+        "  byte end_blue = (endColor & 0x0000FF);\n"+
+        "  \n"+
+        "  short delta_red = end_red - start_red;\n"+
+        "  short delta_green = end_green - start_green;\n"+
+        "  short delta_blue = end_blue - start_blue;\n"+
+        "  \n"+
+        "  int delayVal = 5;\n"+
+        "  int steps = (int)(duration*1000/delayVal);\n"+
+        "  \n"+
+        "  float red_step = delta_red*1.0/steps;\n"+
+        "  float green_step = delta_green*1.0/steps;\n"+
+        "  float blue_step = delta_blue*1.0/steps;\n"+
+        "  \n"+
+        "  for (int i = 0; i < steps; i++){\n"+
+        "   for (int j = 0; j < LED_COUNT; j++){\n"+
+        "    leds.setPixelColor(j, start_red + red_step*i, start_green + green_step*i, start_blue + blue_step*i);\n"+
+        "   }\n"+
+        "   leds.show();\n"+
+        "   delay(delayVal);\n"+
+        "  } \n"+
+        "}\n"+
+        "\n"+
+        "void setColorWithoutRange(long color, float duration) {\n"+
+        "    boolean rainbow = color == -1;\n"+
+        "    byte red = (color & 0xFF0000) >> 16;\n"+
+        "    byte green = (color & 0x00FF00) >> 8;\n"+
+        "    byte blue = (color & 0x0000FF);\n"+
+        "\n"+
+        "    for(int i=0; i<LED_COUNT; i++){\n"+
+        "    if(rainbow){\n"+
+        "        color = rainbowColor(i);\n"+
+        "        red = (color & 0xFF0000) >> 16;\n"+
+        "        green = (color & 0x00FF00) >> 8;\n"+
+        "        blue = (color & 0x0000FF);\n"+
+        "    }\n"+
+        "        leds.setPixelColor(i, red, green, blue);\n"+
+        "    }\n"+
+        "    leds.show();\n"+
+        "    delay(duration*1000);\n"+
+        "}\n"+
         //////////////////////////////////////////// +
         ////   Clear LEDs method   ///////////////// +
         //////////////////////////////////////////// +
@@ -320,19 +314,231 @@ package object semantics {
         "\t}\n"+
         "}\n"+
         "\n"+
-        "void rainbow(int duration){\n"+
-        "\tint delayVal = 50;\n"+
-        "\tfloat timeScale = duration*1000.0/(LED_COUNT*delayVal);\n"+
-        "\tint iterCount = (int)(LED_COUNT * timeScale);\n"+
-        "\t//float rainbowScale = 192 / LED_COUNT;\n"+
-        "\t\n"+
-        "\tfor (int i = 0; i < LED_COUNT; i++){\n"+
-        "\t\tleds.setPixelColor( i % LED_COUNT, rainbowColor(i % LED_COUNT));\n"+
-        "\t}\n"+
-        "\tleds.show();\n"+
-        "\tdelay(duration*1000); \n"+
+        "void rainbow(float duration){\n" +
+        "\tint delayVal = 50;\n" +
+        "\tint iterCount = (int)(duration*1000/delayVal);\n" +
+        "\tfloat rainbowScale = 192 / LED_COUNT;\n" +
+        "\t\n" +
+        "\tfor (int i = 0; i < iterCount; i++){\n" +
+        "\tfor (int j = 0; j < LED_COUNT; j++){\n" +
+        "\t\tleds.setPixelColor(j, rainbowColor((int)(rainbowScale * (j + i)) % 192));\n" +
+        "\t}\n" +
+        "\tleds.show();\n" +
+        "\tdelay(delayVal);\n" +
+        "\t}\n" +
+        "}\n" +
+        "\n"+
+        "\n"+
+        "/********************************\n"+
+        "* If End Color is not -1, then\n"+
+        "* the user has specified a color\n"+
+        "* range for fading so run\n"+
+        "* *cylonWithoutRange*. otherwise,\n"+
+        "* run *cylonWithRange*\n"+
+        "********************************/\n"+
+        "void cylon(long startColor, long endColor, float duration){\n"+
+        "  if(endColor != -1){\n"+
+        "    cylonWithRange(startColor, endColor, duration);\n"+
+        "  }\n"+
+        "  else {\n"+
+        "    cylonWithoutRange(startColor, duration);\n"+
+        "  }\n"+
         "}\n"+
-        "\n"
+        "\n"+
+        "void cylonWithoutRange(long color, float duration)\n"+
+        "{\n"+
+        "    // weight determines how much lighter the outer \"eye\" colors are\n"+
+        "    const byte weight = 4;\n"+
+        "    float delayVal = duration/(2*LED_COUNT)*1000;\n"+
+        "    boolean rainbow = color == -1;\n"+
+        "\n"+
+        "    // Start at closest LED, and move to the outside\n"+
+        "    for (int i = 0; i <= LED_COUNT - 1; i++)\n"+
+        "    {\n"+
+        "\n"+
+        "        if(rainbow){\n"+
+        "            color = rainbowColor(i);\n"+
+        "        }\n"+
+        "        // It'll be easier to decrement each of these colors individually\n"+
+        "        // so we'll split them out of the 24-bit color value\n"+
+        "        byte red = (color & 0xFF0000) >> 16;\n"+
+        "        byte green = (color & 0x00FF00) >> 8;\n"+
+        "        byte blue = (color & 0x0000FF);\n"+
+        "        \n"+
+        "        clearLEDs();\n"+
+        "        leds.setPixelColor(i, red, green, blue);  // Set the bright middle eye\n"+
+        "        // Now set two eyes to each side to get progressively dimmer\n"+
+        "        for (int j = 1; j < 3; j++)\n"+
+        "        {\n"+
+        "            if (i - j >= 0)\n"+
+        "                leds.setPixelColor(i - j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "            if (i - j <= LED_COUNT)\n"+
+        "                leds.setPixelColor(i + j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "        }\n"+
+        "        leds.show();  // Turn the LEDs on\n"+
+        "        delay(delayVal);  // Delay for visibility\n"+
+        "    }\n"+
+        "\n"+
+        "    // Now we go back to where we came. Do the same thing.\n"+
+        "    for (int i = LED_COUNT - 2; i >= 1; i--)\n"+
+        "    {\n"+
+        "        if(rainbow){\n"+
+        "            color = rainbowColor(i);\n"+
+        "        }\n"+
+        "        // It'll be easier to decrement each of these colors individually\n"+
+        "        // so we'll split them out of the 24-bit color value\n"+
+        "        byte red = (color & 0xFF0000) >> 16;\n"+
+        "        byte green = (color & 0x00FF00) >> 8;\n"+
+        "        byte blue = (color & 0x0000FF);\n"+
+        "        \n"+
+        "        clearLEDs();\n"+
+        "        leds.setPixelColor(i, red, green, blue);\n"+
+        "        for (int j = 1; j < 3; j++)\n"+
+        "        {\n"+
+        "            if (i - j >= 0)\n"+
+        "                leds.setPixelColor(i - j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "            if (i - j <= LED_COUNT)\n"+
+        "                leds.setPixelColor(i + j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "        }\n"+
+        "\n"+
+        "        leds.show();\n"+
+        "        delay(delayVal);\n"+
+        "    }\n"+
+        "}\n"+
+        "\n"+
+        "void cylonWithRange(long startColor, long endColor, float duration){\n"+
+        "    // weight determines how much lighter the outer \"eye\" colors are\n"+
+        "  const byte weight = 4;\n"+
+        "  int steps = 2*LED_COUNT;\n"+
+        "  float delayVal = duration/(steps)*1000;\n"+
+        "\n"+
+        "  byte start_red = (startColor & 0xFF0000) >> 16;\n"+
+        "  byte start_green = (startColor & 0x00FF00) >> 8;\n"+
+        "  byte start_blue = (startColor & 0x0000FF);\n"+
+        "  byte end_red = (endColor & 0xFF0000) >> 16;\n"+
+        "  byte end_green = (endColor & 0x00FF00) >> 8;\n"+
+        "  byte end_blue = (endColor & 0x0000FF);\n"+
+        "  \n"+
+        "  short delta_red = end_red - start_red;\n"+
+        "  short delta_green = end_green - start_green;\n"+
+        "  short delta_blue = end_blue - start_blue;\n"+
+        "  \n"+
+        "  \n"+
+        "  float red_step =delta_red*1.0/steps;\n"+
+        "  float green_step =delta_green*1.0/steps;\n"+
+        "  float blue_step =delta_blue*1.0/steps;\n"+
+        "  //   Start at closest LED, and move to the outside\n"+
+        "  for (int i = 0; i <= steps/2 - 1; i++)\n"+
+        "  {\n"+
+        "\n"+
+        "    byte red = start_red + red_step*i;\n"+
+        "    byte blue = start_blue + blue_step*i;\n"+
+        "    byte green = start_green + green_step*i;\n"+
+        "    \n"+
+        "    clearLEDs();\n"+
+        "    leds.setPixelColor(i, red, green, blue);  // Set the bright middle eye\n"+
+        "    // Now set two eyes to each side to get progressively dimmer\n"+
+        "    for (int j = 1; j < 3; j++)\n"+
+        "    {\n"+
+        "      if (i - j >= 0)\n"+
+        "        leds.setPixelColor(i - j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "      if (i - j <= LED_COUNT)\n"+
+        "        leds.setPixelColor(i + j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "    }\n"+
+        "    leds.show();  // Turn the LEDs on\n"+
+        "    delay(delayVal);  // Delay for visibility\n"+
+        "  }\n"+
+        "\n"+
+        "  // Now we go back to where we came. Do the same thing.\n"+
+        "  for (int i = steps/2 - 2; i >= 1; i--)\n"+
+        "  {\n"+
+        "    byte red = start_red + red_step*i;\n"+
+        "    byte blue = start_blue + blue_step*i;\n"+
+        "    byte green = start_green + green_step*i;\n"+
+        "    \n"+
+        "    clearLEDs();\n"+
+        "    leds.setPixelColor(i, red, green, blue);\n"+
+        "    for (int j = 1; j < 3; j++)\n"+
+        "    {\n"+
+        "      if (i - j >= 0)\n"+
+        "        leds.setPixelColor(i - j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "      if (i - j <= LED_COUNT)\n"+
+        "        leds.setPixelColor(i + j, red / (weight * j), green / (weight * j), blue / (weight * j));\n"+
+        "    }\n"+
+        "\n"+
+        "    leds.show();\n"+
+        "    delay(delayVal);\n"+
+        "  }\n"+
+        "}\n"+
+        "\n"+
+        "/********************************\n"+
+        "* If End Color is not -1, then\n"+
+        "* the user has specified a color\n"+
+        "* range for fading so run\n"+
+        "* *cascadeWithoutRange*. otherwise,\n"+
+        "* run *cascadeWithRange*\n"+
+        "********************************/\n"+
+        "void cascade(long startColor, long endColor, float duration){\n"+
+        "  if (endColor != -1) {\n"+
+        "    cascadeWithRange(startColor, endColor, duration);\n"+
+        "  }\n"+
+        "  else {\n"+
+        "    cascadeWithoutRange(startColor, duration);\n"+
+        "  }\n"+
+        "}\n"+
+        "\n"+
+        "void cascadeWithoutRange(long color, float duration)\n"+
+        "{\n"+
+        "    boolean rainbow = color == -1;\n"+
+        "    float delayVal = LED_COUNT/duration;\n"+
+        "    for (int i = 0; i < LED_COUNT; i++)\n"+
+        "    {\n"+
+        "        if(rainbow){\n"+
+        "            color = rainbowColor(i);\n"+
+        "        }\n"+
+        "        clearLEDs();  // Turn off all LEDs\n"+
+        "        leds.setPixelColor(i, color);  // Set just this one\n"+
+        "        leds.show();\n"+
+        "        delay(delayVal);\n"+
+        "    }\n"+
+        "\n"+
+        "}\n"+
+        "\n"+
+        "void cascadeWithRange(long startColor, long endColor, float duration){\n"+
+        "\n"+
+        "  int steps = LED_COUNT;\n"+
+        "  float delayVal = duration/(steps)*1000;\n"+
+        "\n"+
+        "  byte start_red = (startColor & 0xFF0000) >> 16;\n"+
+        "  byte start_green = (startColor & 0x00FF00) >> 8;\n"+
+        "  byte start_blue = (startColor & 0x0000FF);\n"+
+        "  byte end_red = (endColor & 0xFF0000) >> 16;\n"+
+        "  byte end_green = (endColor & 0x00FF00) >> 8;\n"+
+        "  byte end_blue = (endColor & 0x0000FF);\n"+
+        "  \n"+
+        "  short delta_red = end_red - start_red;\n"+
+        "  short delta_green = end_green - start_green;\n"+
+        "  short delta_blue = end_blue - start_blue;\n"+
+        "  \n"+
+        "  \n"+
+        "  float red_step =delta_red*1.0/steps;\n"+
+        "  float green_step =delta_green*1.0/steps;\n"+
+        "  float blue_step =delta_blue*1.0/steps;\n"+
+        "\n"+
+        "  for (int i = 0; i < steps; i++)\n"+
+        "  {\n"+
+        "    byte red = start_red + red_step*i;\n"+
+        "    byte blue = start_blue + blue_step*i;\n"+
+        "    byte green = start_green + green_step*i;\n"+
+        " \n"+
+        "    clearLEDs();  // Turn off all LEDs\n"+
+        "    leds.setPixelColor(i, red, green, blue);  // Set just this one\n"+
+        "    leds.show();\n"+
+        "    delay(delayVal);\n"+
+        "  }\n"+
+        "}\n"+
+        " \n"
+
 
     def voidFuncHeader(name: String) = 
         "void " + name + "() {\n"
@@ -353,29 +559,39 @@ package object semantics {
         case StripColor(col, dur)   => "\tsetColor(" + evalColor(col) + ", " + dur + ");\n"
         case CustomEffect(name)     => "\t" + name + "();\n"
         case Cascade(col, dur)      => "\tcascade(" + evalColor(col) + ", " + dur + ");\n"
-        case Wave(col, dur)         => "\twave(" + evalColor(col) + ", " + dur + ");\n"
         case Cylon(col, dur)        => "\tcylon(" + evalColor(col) + ", " + dur + ");\n"
-        case Rainbow(dur)           => "\trainbow(" + dur + ");\n"
-        case default                     => "//Expr default//"
+        case RainbowEffect(dur)     => "\trainbow(" + dur + ");\n"
+        case default                => "//Expr default//"
     }
 
     def evalColor(col: Color): String = col match {
-        case RED        => "RED"
-        case BLUE       => "BLUE"
-        case GREEN      => "GREEN"
-        case ORANGE     => "ORANGE"
-        case INDIGO     => "INDIGO"
-        case PINK       => "PINK"
-        case RGB(r,g,b) => evalRGB(r, g, b)
-        case default    => "// default //"
-        //case RAINBOW    => "RAINBOW"
+        case RED            => "RED, -1"
+        case BLUE           => "BLUE, -1"
+        case GREEN          => "GREEN, -1"
+        case ORANGE         => "ORANGE, -1"
+        case INDIGO         => "INDIGO, -1"
+        case PINK           => "PINK, -1"
+        case RGB(r,g,b)     => evalRGB(r, g, b)
+        case RAINBOW        => "-1, -1"
+        case RANGE(sc, ec)  => evalRange(sc, ec)
+        case default        => "// default //"
     }
 
     def evalRGB(red: Integer, green: Integer, blue: Integer): String = {
         val redHex = Integer.toHexString(red)
         val greenHex = Integer.toHexString(green)
         val blueHex = Integer.toHexString(blue)
-        "0x" + redHex + greenHex + blueHex
+        "0x" + redHex + greenHex + blueHex + ", -1"
+    }
+
+    def evalRange(startColor : Color, endColor : Color): String = {
+        val sc = evalColor(startColor)
+        val ec = evalColor(endColor)
+
+        val scNoComma = sc.replaceAll(", -1", "")
+        val ecNoComma = ec.replaceAll(", -1", "")
+
+        scNoComma + ", " + ecNoComma
     }
 
 }
