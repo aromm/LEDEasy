@@ -12,8 +12,8 @@ object ORANGE extends Color
 object INDIGO extends Color
 object PINK extends Color
 object RAINBOW extends Color
-case class RGB (red : Integer, green : Integer, blue : Integer) extends Color 
-case class RANGE (startColor : Color, endColor : Color) extends Color
+case class RGB (red: Integer, green: Integer, blue: Integer) extends Color 
+case class RANGE (startColor: Color, endColor: Color) extends Color
 
 
 
@@ -30,7 +30,7 @@ case class LedData(count: Integer, pin: Integer) extends Stmt
 
 sealed abstract class Expr // shouldnt be called expr
 case class StripColor (col: Color, duration: Float) extends Expr
-case class CustomEffect (name: String) extends Expr
+case class CustomEffect (name: String, loop: Integer) extends Expr
 case class Cascade (col: Color, duration: Float) extends Expr
 case class Cylon(col: Color, duration: Float) extends Expr
 case class RainbowEffect (duration: Float) extends Expr

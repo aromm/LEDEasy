@@ -183,7 +183,7 @@ package object semantics {
     def evalStmt (stmt: Stmt): String = stmt match {
         case Effect(name, body)              => voidFuncHeader(name) + evalExprs(body) + "}\n"
         case Main(body)                      => loopFuncHeader() + evalExprs(body) + "}\n"
-        case LedData(count, pin)              => "#define LED_COUNT " + count + "\n" + "#define PIN " + pin + "\n" + declareLeds() + declareSetup() + declareHelperFuncs()
+        case LedData(count, pin)             => "#define LED_COUNT " + count + "\n" + "#define PIN " + pin + "\n" + declareLeds() + declareSetup() + declareHelperFuncs()
         case default                         => "//Stmt default//"
     }
 
@@ -199,7 +199,69 @@ package object semantics {
           "\tleds.show();   // ...but the LEDs don't actually update until you call this.\n" +
           "}\n" +
           "\n" 
+    
+    def evalExprs(exprs: List[Expr]): String = {
+        if (exprs.isEmpty){
+            ""
+        }
+        else {
+            evalExpr(exprs.head) + evalExprs(exprs.tail)
+        }
+    }
 
+    def evalExpr(expr: Expr): String = expr match {
+        case StripColor(col, dur)       => "\tsetColor(" + evalColor(col) + ", " + dur + ");\n"
+        case CustomEffect(name, loop)   => evalCustom(name, loop)
+        case Cascade(col, dur)          => "\tcascade(" + evalColor(col) + ", " + dur + ");\n"
+        case Cylon(col, dur)            => "\tcylon(" + evalColor(col) + ", " + dur + ");\n"
+        case RainbowEffect(dur)         => "\trainbow(" + dur + ");\n"
+        case default                    => "//Expr default//"
+    }
+
+    def evalCustom(name: String, loop: Integer): String = {
+        if (loop == 1) {
+            "\t" + name + "();\n"
+        }
+        else if (loop >= 0){
+            "\tfor(int cus = 0; cus < " + loop + "; cus++){\n" +
+            "\t\t" + name + "();\n" +
+            "\t}\n"
+        }
+        else {
+            "//Custom Error//"
+        }
+   
+    }
+
+    def evalColor(col: Color): String = col match {
+        case RED            => "RED, -1"
+        case BLUE           => "BLUE, -1"
+        case GREEN          => "GREEN, -1"
+        case ORANGE         => "ORANGE, -1"
+        case INDIGO         => "INDIGO, -1"
+        case PINK           => "PINK, -1"
+        case RGB(r,g,b)     => evalRGB(r, g, b)
+        case RAINBOW        => "-1, -1"
+        case RANGE(sc, ec)  => evalRange(sc, ec)
+        case default        => "// default //"
+    }
+
+    def evalRGB(red: Integer, green: Integer, blue: Integer): String = {
+        val redHex = Integer.toHexString(red)
+        val greenHex = Integer.toHexString(green)
+        val blueHex = Integer.toHexString(blue)
+        "0x" + redHex + greenHex + blueHex + ", -1"
+    }
+
+    def evalRange(startColor : Color, endColor : Color): String = {
+        val sc = evalColor(startColor)
+        val ec = evalColor(endColor)
+
+        val scNoComma = sc.replaceAll(", -1", "")
+        val ecNoComma = ec.replaceAll(", -1", "")
+
+        scNoComma + ", " + ecNoComma
+    }
     def declareHelperFuncs() = 
         //////////////////////////////////////////// +
         ////   SET COLOR  method   ///////////////// +
@@ -545,53 +607,5 @@ package object semantics {
 
     def loopFuncHeader() = 
         "void loop() {\n"
-
-    def evalExprs(exprs: List[Expr]): String = {
-        if (exprs.isEmpty){
-            ""
-        }
-        else {
-            evalExpr(exprs.head) + evalExprs(exprs.tail)
-        }
-    }
-
-    def evalExpr(expr: Expr): String = expr match {
-        case StripColor(col, dur)   => "\tsetColor(" + evalColor(col) + ", " + dur + ");\n"
-        case CustomEffect(name)     => "\t" + name + "();\n"
-        case Cascade(col, dur)      => "\tcascade(" + evalColor(col) + ", " + dur + ");\n"
-        case Cylon(col, dur)        => "\tcylon(" + evalColor(col) + ", " + dur + ");\n"
-        case RainbowEffect(dur)     => "\trainbow(" + dur + ");\n"
-        case default                => "//Expr default//"
-    }
-
-    def evalColor(col: Color): String = col match {
-        case RED            => "RED, -1"
-        case BLUE           => "BLUE, -1"
-        case GREEN          => "GREEN, -1"
-        case ORANGE         => "ORANGE, -1"
-        case INDIGO         => "INDIGO, -1"
-        case PINK           => "PINK, -1"
-        case RGB(r,g,b)     => evalRGB(r, g, b)
-        case RAINBOW        => "-1, -1"
-        case RANGE(sc, ec)  => evalRange(sc, ec)
-        case default        => "// default //"
-    }
-
-    def evalRGB(red: Integer, green: Integer, blue: Integer): String = {
-        val redHex = Integer.toHexString(red)
-        val greenHex = Integer.toHexString(green)
-        val blueHex = Integer.toHexString(blue)
-        "0x" + redHex + greenHex + blueHex + ", -1"
-    }
-
-    def evalRange(startColor : Color, endColor : Color): String = {
-        val sc = evalColor(startColor)
-        val ec = evalColor(endColor)
-
-        val scNoComma = sc.replaceAll(", -1", "")
-        val ecNoComma = ec.replaceAll(", -1", "")
-
-        scNoComma + ", " + ecNoComma
-    }
 
 }

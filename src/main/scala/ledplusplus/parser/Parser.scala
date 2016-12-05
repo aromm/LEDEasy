@@ -39,10 +39,11 @@ object LedParser extends JavaTokenParsers with PackratParsers with RegexParsers{
 // make setColor not strip color
     lazy val expr: PackratParser[Expr] = 
       (   "Set color"~color~"for"~duration    ^^ {case "Set color"~c~"for"~d => StripColor(c, d) } 
-        | "Cascade"~color~"for"~duration       ^^ {case "Cascade"~c~"for"~d         => Cascade(c, d)}
-        | "Cylon"~color~"for"~duration         ^^ {case "Cylon"~c~"for"~d           => Cylon(c, d)}
+        | "Cascade"~color~"for"~duration      ^^ {case "Cascade"~c~"for"~d   => Cascade(c, d)}
+        | "Cylon"~color~"for"~duration        ^^ {case "Cylon"~c~"for"~d     => Cylon(c, d)}
         | "Rainbow"~"for"~duration            ^^ {case "Rainbow"~"for"~d     => RainbowEffect(d)}
-        | name                                ^^ {case n                     => CustomEffect(n)})
+        | name~(opt("times"~>number))         ^^ {case n~None                => CustomEffect(n, 1)
+                                                  case n~Some(nu)            => CustomEffect(n, nu)})
 
     // does this just consume our desired string or all the tokens in the world
     def name: Parser[String] =  """[a-zA-Z]+""".r ^^ { _.toString }

@@ -5,7 +5,7 @@ filename=$1
 
 # run sbt program
 echo "Initializing program"
-sbt --warn <<<  "run ledplusplus $filename"
+sbt --error <<<  "run ledplusplus $filename"
 
 echo "--------------------------"
 echo "Arduino file created"
