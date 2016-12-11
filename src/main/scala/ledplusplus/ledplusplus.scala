@@ -33,7 +33,7 @@ object Led {
     val sourceFile = io.Source.fromFile(srcFileName)
     val source = try sourceFile.mkString finally sourceFile.close()
 
-    val parseResult = LedParser(source)
+    val parseResult = LedParser(source.toLowerCase())
   
   
     parseResult match {

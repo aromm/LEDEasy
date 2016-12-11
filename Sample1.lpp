@@ -1,0 +1,30 @@
+Led count 30 pin 15
+
+Effect fadeRedBlue {
+    set color color = Red -> Blue time = .5
+    set color time = .5 color = Blue -> Red
+}
+
+Effect rainbowsss {
+    Rainbow time = 2
+    set color color = rainbow time = 2
+}
+
+Effect scaryRainDrops {
+    cascade time = 2 color = rainbow
+    cascade time = 1 color = White
+    cascade time = 1 color = Blue
+    cascade time = 1 color = Blue -> Red
+    cascade time = 1 color = rgb 0 101 255 -> rgb 255 101 255
+    scaryCylon times=3
+}
+
+Effect scaryCylon {
+    Cylon time = 2 color = Red
+}
+
+Main {
+    rainbowsss
+    scaryRainDrops
+    fadeRedBlueRainbows times = 10
+}
